@@ -1,6 +1,6 @@
 import folium
 
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
 from .models import Pokemon, PokemonEntity
@@ -58,18 +58,9 @@ def show_all_pokemons(request):
 
 
 def show_pokemon(request, pokemon_id):
-    localtime_now = timezone.localtime()
     folium_map = folium.Map(location=MOSCOW_CENTER, zoom_start=12)
-    try:
-        pokemon = Pokemon.objects.get(id=int(pokemon_id))
-    except Pokemon.DoesNotExist:
-        print(f'Такого покемона нет')
-
-    pokemon_entities = PokemonEntity.objects.filter(
-        appeared_at__lte=localtime_now,
-        disappeared_at__gte=localtime_now,
-        pokemon=pokemon
-    )
+    pokemon = get_object_or_404(Pokemon, id=pokemon_id)
+    pokemon_entities = pokemon.entities.all()
 
     for entity in pokemon_entities:
         add_pokemon(
@@ -77,7 +68,6 @@ def show_pokemon(request, pokemon_id):
             entity.lon,
             request.build_absolute_uri(entity.pokemon.image.url),
         )
-        print(pokemon_entities)
 
     pokemon_on_page = {
         'pokemon_id': pokemon.id,
@@ -95,7 +85,7 @@ def show_pokemon(request, pokemon_id):
             'img_url': request.build_absolute_uri(pokemon.previous_evolution.image.url)
         }
 
-    next_evolution = pokemon.next_evolution.all().first()
+    next_evolution = pokemon.next_evolutions.all().first()
     if next_evolution:
         pokemon_on_page['next_evolution'] = {
             'pokemon_id': next_evolution.id,
